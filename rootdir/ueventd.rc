@@ -37,7 +37,7 @@ subsystem sound
 /dev/binder               0666   root       root
 /dev/hwbinder             0666   root       root
 /dev/vndbinder            0666   root       root
-
+/dev/stabd                0666   root       system
 /dev/pmsg0                0222   root       log
 
 # kms driver for drm based gpu
@@ -45,7 +45,7 @@ subsystem sound
 
 # these should not be world writable
 /dev/uhid                 0660   uhid       uhid
-/dev/uinput               0660   uhid       uhid
+/dev/uinput               0666   uhid       uhid
 /dev/rtc0                 0640   system     system
 /dev/tty0                 0660   root       system
 /dev/graphics/*           0660   root       graphics
@@ -54,7 +54,7 @@ subsystem sound
 /dev/snd/*                0660   system     audio
 /dev/bus/usb/*            0660   root       usb
 /dev/mtp_usb              0660   root       mtp
-/dev/usb_accessory        0660   root       usb
+/dev/usb_accessory        0666   root       usb
 /dev/tun                  0660   system     vpn
 
 # CDMA radio interface MUX
@@ -67,3 +67,7 @@ subsystem sound
 /sys/devices/virtual/usb_composite/*   enable      0664  root   system
 /sys/devices/system/cpu/cpu*   cpufreq/scaling_max_freq   0664  system system
 /sys/devices/system/cpu/cpu*   cpufreq/scaling_min_freq   0664  system system
+
+# added by PICO_Driver jim.qiu for bug#58022: we enable hid on second usb --start--
+/dev/hidg0                0666    system    system
+# added by PICO_Driver jim.qiu for bug#58022: we enable hid on second usb --end--
