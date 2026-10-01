@@ -310,7 +310,7 @@ void HandleControlMessage(const std::string& msg, const std::string& name, pid_t
         process_cmdline = "unknown process";
     }
 
-    LOG(INFO) << "Received control message '" << msg << "' for '" << name << "' from pid: " << pid
+    LOG(DEBUG) << "Received control message '" << msg << "' for '" << name << "' from pid: " << pid
               << " (" << process_cmdline << ")";
 
     const ControlMessageFunction& function = it->second;
@@ -331,7 +331,6 @@ void HandleControlMessage(const std::string& msg, const std::string& name, pid_t
     }
 
     if (svc == nullptr) {
-        LOG(ERROR) << "Could not find '" << name << "' for ctl." << msg;
         return;
     }
 
