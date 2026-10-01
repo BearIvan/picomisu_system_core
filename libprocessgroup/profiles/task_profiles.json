@@ -270,6 +270,21 @@
         }
       ]
     },
+    // Smt:[FEAT_PROCESS_3RD] {@
+    {
+      "Name": "ProcessCapacity3rd",
+      "Actions": [
+        {
+          "Name": "JoinCgroup",
+          "Params":
+          {
+            "Controller": "cpuset",
+            "Path": "bg_3rd_app"
+          }
+        }
+      ]
+    },
+    // @}
     {
       "Name": "ProcessCapacityNormal",
       "Actions": [
@@ -363,6 +378,45 @@
         }
       ]
     },
+    {
+      "Name": "PicoSystemCapacity",
+      "Actions" : [
+        {
+          "Name" : "JoinCgroup",
+          "Params" :
+          {
+            "Controller": "cpuset",
+            "Path": "pico-system"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "ClusterSuperCapacity",
+      "Actions" : [
+        {
+          "Name" : "JoinCgroup",
+          "Params" :
+          {
+            "Controller": "cpuset",
+            "Path": "cluster-super"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "Dex2oatCapacity",
+      "Actions" : [
+        {
+          "Name" : "JoinCgroup",
+          "Params" :
+          {
+            "Controller": "cpuset",
+            "Path": "dex2oat"
+          }
+        }
+      ]
+    },
 
     {
       "Name": "BlkIOForeground",
@@ -404,6 +458,21 @@
         }
       ]
     },
+    //Smt: [FEAT_PREFETCH_VR] {@
+    {
+      "Name": "PrefetchLowIoPriority",
+      "Actions": [
+        {
+          "Name": "JoinCgroup",
+          "Params":
+          {
+            "Controller": "blkio",
+            "Path": "prefetch"
+          }
+        }
+      ]
+    },
+    //@}
     {
       "Name": "NormalIoPriority",
       "Actions": [
@@ -578,7 +647,59 @@
           }
         }
       ]
-    }
+    },
     //@}
+    {
+      "Name": "PicoInShellCapacity",
+      "Actions": [
+        {
+          "Name": "JoinCgroup",
+          "Params":
+          {
+            "Controller": "cpuset",
+            "Path": "app-inshell"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "PicoShellAppCapacity",
+      "Actions": [
+        {
+          "Name": "JoinCgroup",
+          "Params":
+          {
+            "Controller": "cpuset",
+            "Path": "shell-app"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "PicoVrForegroundCapacity",
+      "Actions": [
+        {
+          "Name": "JoinCgroup",
+          "Params":
+          {
+            "Controller": "cpuset",
+            "Path": "vrforeground"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "CompositorCapacity",
+      "Actions": [
+        {
+          "Name": "JoinCgroup",
+          "Params":
+          {
+            "Controller": "cpuset",
+            "Path": "compositor"
+          }
+        }
+      ]
+    }
   ]
 }
