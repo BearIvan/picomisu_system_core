@@ -384,6 +384,36 @@ static Result<Success> SetupCgroupsAction(const BuiltinArguments&) {
     return Success();
 }
 
+// PICO: the HMD panel type (ro.pvr.hmd.type, read by bootanimation, pxrhmdservice, the IPD
+// service, XRRuntime, PvrManager...) follows the DSI panel the bootloader selected
+// (msm_drm.dsi_display0=<panel node>:...). The kernel command line is imported before the .prop
+// files are loaded, so this value wins over the ro.pvr.hmd.type default in /vendor/build.prop.
+// Panel node prefixes in the factory (PICO OS 5.13.7 /system/bin/init) order.
+static void import_pico_hmd_type(const std::string& panel) {
+    static const struct {
+        const char* panel;
+        const char* hmd_type;
+        const char* lcd_type;
+    } kPicoPanels[] = {
+            {"dsi_jdi_uhd_lcd_dual_video_display_2kto4k", "JDI4K", nullptr},
+            {"dsi_jdi_uhd_lcd_dual_video_display", "JDI4K", nullptr},
+            {"dsi_jdi_475a_lcd_dual_video_display", "JDI1080P", nullptr},
+            {"qcom,mdss_dsi_jdi_4k_55", "JDI554K", nullptr},
+            {"qcom,mdss_dsi_jdi_493", "JDI493", nullptr},
+            {"qcom,mdss_dsi_sharp_493", "JDI493", "SHARP493"},
+            {"qcom,mdss_dsi_jdi_nvt", "JDI493", "JDINVT"},
+            {"dsi_jdi_uhd_552kt4klcd_dual_video_display", "JDI552KT4K", nullptr},
+            {"qcom,mdss_dsi_innolux_nt57900", "INNOLUX5K", nullptr},
+            {"qcom,mdss_dsi_sharp_ls026b3sa", "SHARP5K", nullptr},
+    };
+    for (const auto& p : kPicoPanels) {
+        if (strncmp(panel.c_str(), p.panel, strlen(p.panel)) != 0) continue;
+        property_set("ro.pvr.hmd.type", p.hmd_type);
+        if (p.lcd_type != nullptr) property_set("ro.pvr.hmd.lcd.type", p.lcd_type);
+        return;
+    }
+}
+
 static void import_kernel_nv(const std::string& key, const std::string& value, bool for_emulator) {
     if (key.empty()) return;
 
@@ -397,6 +427,8 @@ static void import_kernel_nv(const std::string& key, const std::string& value, b
         strlcpy(qemu, value.c_str(), sizeof(qemu));
     } else if (android::base::StartsWith(key, "androidboot.")) {
         property_set("ro.boot." + key.substr(12), value);
+    } else if (android::base::StartsWith(key, "msm_drm.dsi_display0")) {
+        import_pico_hmd_type(value);
     }
 }
 
