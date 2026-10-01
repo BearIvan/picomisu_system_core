@@ -296,6 +296,7 @@ on init
 
     # Start logd before any other services run to ensure we capture all of their logs.
     start logd
+    start logd-reinit
 
     # Start essential services.
     start servicemanager
@@ -310,8 +311,6 @@ on property:sys.boot_from_charger_mode=1
 
 on load_persist_props_action
     load_persist_props
-    start logd
-    start logd-reinit
 
 # Indicate to fw loaders that the relevant mounts are up.
 on firmware_mounts_complete
@@ -480,8 +479,8 @@ on post-fs-data
     # Fix the access permissions and group ownership for 'bt_config.conf'
     chmod 0660 /data/misc/bluedroid/bt_config.conf
     chown bluetooth bluetooth /data/misc/bluedroid/bt_config.conf
-    mkdir /data/misc/bluetooth 0770 bluetooth bluetooth
-    mkdir /data/misc/bluetooth/logs 0770 bluetooth bluetooth
+    mkdir /data/misc/bluetooth 0777 bluetooth bluetooth
+    mkdir /data/misc/bluetooth/logs 0777 bluetooth bluetooth
     mkdir /data/misc/keystore 0700 keystore keystore
     mkdir /data/misc/gatekeeper 0700 system system
     mkdir /data/misc/keychain 0771 system system
@@ -522,6 +521,9 @@ on post-fs-data
     mkdir /data/misc/profiles/ref 0771 system system
     mkdir /data/misc/profman 0770 system shell
     mkdir /data/misc/gcov 0770 root root
+    mkdir /data/misc/logd 0775 root root
+    symlink /data/misc/logd /data/logs
+    symlink /mnt/vendor/logfs /data/logs/logfs
 
     mkdir /data/preloads 0775 system system
 
@@ -542,6 +544,7 @@ on post-fs-data
     mkdir /data/app 0771 system system
     mkdir /data/property 0700 root root
     mkdir /data/tombstones 0771 system system
+    mkdir /data/tombstones/avc-clean 0771 system system #Smt: [FEAT_LAB_TAG]
     mkdir /data/vendor/tombstones 0771 root root
     mkdir /data/vendor/tombstones/wifi 0771 wifi wifi
 
@@ -704,7 +707,7 @@ on boot
     chown system system /sys/power/autosleep
     chown radio wakelock /sys/power/wake_lock
     chown radio wakelock /sys/power/wake_unlock
-    chmod 0660 /sys/power/wake_lock
+    chmod 0666 /sys/power/wake_lock
     chmod 0660 /sys/power/wake_unlock
 
     chown system system /sys/devices/system/cpu/cpufreq/interactive/timer_rate
@@ -780,8 +783,6 @@ on charger
 
 on property:vold.decrypt=trigger_load_persist_props
     load_persist_props
-    start logd
-    start logd-reinit
 
 # corefile limit
 on property:persist.debug.trace=1
