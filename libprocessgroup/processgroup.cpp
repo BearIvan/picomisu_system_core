@@ -459,3 +459,44 @@ bool setProcessGroupSoftLimit(uid_t, int pid, int64_t soft_limit_in_bytes) {
 bool setProcessGroupLimit(uid_t, int pid, int64_t limit_in_bytes) {
     return SetProcessGroupValue(pid, "MemLimit", limit_in_bytes);
 }
+
+// Smartisan cgroup freezer (factory PICO OS 5.13.7 libprocessgroup.so getChildProcessViaGroup):
+// the pids of the uid/pid process cgroup other than initialPid. On success *pids is a malloc'd
+// array of the returned count (the caller frees it); it is left untouched when no pid is found.
+// Returns -1 when the cgroup.procs file cannot be opened.
+int getChildProcessViaGroup(uid_t uid, int initialPid, int** pids) {
+    std::string cgroup;
+    CgroupGetControllerPath("cpuacct", &cgroup);
+    auto path = ConvertUidPidToPath(cgroup.c_str(), uid, initialPid) + PROCESSGROUP_CGROUP_PROCS_FILE;
+    FILE* fd = fopen(path.c_str(), "re");
+    if (!fd) {
+        PLOG(WARNING) << "Failed to open process cgroup uid " << uid << " pid " << initialPid;
+        return -1;
+    }
+
+    int* children = nullptr;
+    int nrp = 0;
+    int nra = 0;
+    pid_t pid;
+    while (fscanf(fd, "%d\n", &pid) == 1 && pid >= 0) {
+        if (pid == 0) {
+            LOG(WARNING) << "get pid 0! it is an error.";
+            continue;
+        }
+        if (pid == initialPid) {
+            continue;
+        }
+        if (nrp >= nra) {
+            nra += 10;
+            children = static_cast<int*>(realloc(children, nra * sizeof(int)));
+        }
+        children[nrp++] = pid;
+        LOG(VERBOSE) << "get one child: " << pid << " in uid " << uid << " of pid: " << initialPid
+                     << " nrp: " << nrp << " nra: " << nra;
+    }
+    if (nrp > 0) {
+        *pids = children;
+    }
+    fclose(fd);
+    return nrp;
+}

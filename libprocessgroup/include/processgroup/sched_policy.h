@@ -39,6 +39,9 @@ extern bool schedboost_enabled();
 
 /* Keep in sync with THREAD_GROUP_* in frameworks/base/core/java/android/os/Process.java */
 typedef enum {
+    // Smartisan cgroup freezer (factory PICO OS 5.13.7): the policy set_freeze_policy() and
+    // Process.setProcessFreezeGroup() use for a frozen task; the factory name is not known.
+    SP_FREEZE = -20,
     SP_DEFAULT = -1,
     SP_BACKGROUND = 0,
     SP_FOREGROUND = 1,
@@ -54,6 +57,13 @@ typedef enum {
 } SchedPolicy;
 
 extern int set_cpuset_policy(int tid, SchedPolicy policy);
+
+/* Smartisan cgroup freezer: moves thread tid into the freezer cgroup (task profile
+ * ApplicationFreezeOn) for SP_FREEZE and back to the root freezer cgroup (ApplicationFreezeOff)
+ * for any other policy. Zero tid means current thread.
+ * Return value: 0 for success, or -1 for error.
+ */
+extern int set_freeze_policy(int tid, SchedPolicy policy);
 
 /* Assign thread tid to the cgroup associated with the specified policy.
  * If the thread is a thread group leader, that is it's gettid() == getpid(),

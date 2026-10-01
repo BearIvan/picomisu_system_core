@@ -56,6 +56,10 @@ bool setProcessGroupSwappiness(uid_t uid, int initialPid, int swappiness);
 bool setProcessGroupSoftLimit(uid_t uid, int initialPid, int64_t softLimitInBytes);
 bool setProcessGroupLimit(uid_t uid, int initialPid, int64_t limitInBytes);
 
+// Smartisan cgroup freezer: pids of the uid/initialPid process cgroup other than initialPid.
+// Returns their number (*pids is then a malloc'd array the caller frees) or -1 on error.
+int getChildProcessViaGroup(uid_t uid, int initialPid, int** pids);
+
 void removeAllProcessGroups(void);
 
 #endif // __ANDROID_VNDK__

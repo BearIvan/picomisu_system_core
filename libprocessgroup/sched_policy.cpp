@@ -87,6 +87,17 @@ int set_cpuset_policy(int tid, SchedPolicy policy) {
     return 0;
 }
 
+int set_freeze_policy(int tid, SchedPolicy policy) {
+    if (tid == 0) {
+        tid = GetThreadId();
+    }
+
+    if (policy == SP_FREEZE) {
+        return SetTaskProfiles(tid, {"ApplicationFreezeOn"}, true) ? 0 : -1;
+    }
+    return SetTaskProfiles(tid, {"ApplicationFreezeOff"}, true) ? 0 : -1;
+}
+
 int set_sched_policy(int tid, SchedPolicy policy) {
     if (tid == 0) {
         tid = GetThreadId();

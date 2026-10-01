@@ -551,6 +551,34 @@
           }
         }
       ]
+    },
+    {
+      "Name": "ApplicationFreezeOn",
+      "Actions": [
+        {
+          "Name": "JoinCgroup",
+          "Params":
+          {
+            "Controller": "freezer",
+            "Path": "smtfrozen"
+          }
+        }
+      ]
+    },
+    //Smt: [FEAT_FREEZE] {@
+    {
+      "Name": "ApplicationFreezeOff",
+      "Actions": [
+        {
+          "Name": "JoinCgroup",
+          "Params":
+          {
+            "Controller": "freezer",
+            "Path": ""
+          }
+        }
+      ]
     }
+    //@}
   ]
 }

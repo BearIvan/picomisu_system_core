@@ -39,7 +39,16 @@
       "Mode": "0755",
       "UID": "system",
       "GID": "system"
+    },
+    //Smt: [FEAT_FREEZE] {@
+    {
+      "Controller": "freezer",
+      "Path": "/dev/freezer",
+      "Mode": "0755",
+      "UID": "root",
+      "GID": "root"
     }
+    //@}
   ],
   "Cgroups2": {
     "Path": "/dev/cg2_bpf",
