@@ -159,6 +159,12 @@ typedef enum log_id {
   LOG_ID_SECURITY = 6,
   /** The kernel log buffer. */
   LOG_ID_KERNEL = 7,
+  /** The Smartisan system event log buffer (factory PICO OS). */
+  LOG_ID_SYSEVENT = 8,
+  /** The Smartisan system fatal log buffer (factory PICO OS). */
+  LOG_ID_SYSFATAL = 9,
+  /** The Smartisan untrusted app log buffer (factory PICO OS). */
+  LOG_ID_UNTRUSTEDAPP = 10,
 
   LOG_ID_MAX
 } log_id_t;

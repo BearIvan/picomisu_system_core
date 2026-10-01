@@ -32,6 +32,9 @@ static const char* LOG_NAME[LOG_ID_MAX] = {
   [LOG_ID_STATS] = "stats",
   [LOG_ID_SECURITY] = "security",
   [LOG_ID_KERNEL] = "kernel",
+  [LOG_ID_SYSEVENT] = "sysevent",
+  [LOG_ID_SYSFATAL] = "sysfatal",
+  [LOG_ID_UNTRUSTEDAPP] = "untrustedapp",
     /* clang-format on */
 };
 

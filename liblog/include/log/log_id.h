@@ -32,7 +32,11 @@ typedef enum log_id {
   LOG_ID_CRASH = 4,
   LOG_ID_STATS = 5,
   LOG_ID_SECURITY = 6,
-  LOG_ID_KERNEL = 7, /* place last, third-parties can not use it */
+  LOG_ID_KERNEL = 7, /* third-parties can not use it */
+  /* Smartisan buffers of the factory PICO OS 5.13.7 liblog/logd/logcat */
+  LOG_ID_SYSEVENT = 8,
+  LOG_ID_SYSFATAL = 9,
+  LOG_ID_UNTRUSTEDAPP = 10,
 
   LOG_ID_MAX
 } log_id_t;
