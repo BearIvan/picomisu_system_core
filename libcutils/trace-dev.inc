@@ -81,9 +81,11 @@ static bool atrace_is_cmdline_match(const char* cmdline)
 static bool atrace_is_app_tracing_enabled()
 {
     bool sys_debuggable = property_get_bool("ro.debuggable", 0);
+    // PICO (factory PICO OS 5.13.7): debug.jank.enable also allows app-level tracing.
+    bool jank_enable = property_get_bool("debug.jank.enable", 0);
     bool result = false;
 
-    if (sys_debuggable || atrace_is_debuggable) {
+    if (sys_debuggable || jank_enable || atrace_is_debuggable) {
         // Check whether tracing is enabled for this process.
         FILE * file = fopen("/proc/self/cmdline", "re");
         if (file) {
