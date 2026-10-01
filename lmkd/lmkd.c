@@ -204,6 +204,7 @@ struct event_handler_info {
 /* data required to handle socket events */
 struct sock_event_handler_info {
     int sock;
+    uint32_t async_event_mask;
     struct event_handler_info handler_info;
 };
 
@@ -1026,6 +1027,33 @@ static int ctrl_data_write(int dsock_idx, char *buf, size_t bufsz) {
     return ret;
 }
 
+static void ctrl_data_write_lmk_kill_occurred(pid_t pid, uid_t uid, int oomadj,
+                                              const char *taskname) {
+    /*
+     * The factory builds this packet in a LMKD_CTRL_PACKET (101 ints) and sends
+     * (5 + strlen(taskname)) ints, which overruns that buffer for names longer
+     * than 96 characters. Deliberate safety deviation: the buffer holds the
+     * header and every name proc_get_name() can return (LINE_MAX - 1 chars),
+     * so the packet written to the socket has the factory layout and length
+     * without reading or writing past the buffer.
+     */
+    int packet[5 + LINE_MAX] = { 0 };
+    size_t len = lmkd_pack_set_prockills(packet, pid, uid, oomadj, taskname);
+
+    for (int i = 0; i < MAX_DATA_CONN; i++) {
+        if (data_sock[i].sock >= 0 && data_sock[i].async_event_mask & 1 << LMK_ASYNC_EVENT_KILL) {
+            ctrl_data_write(i, (char*)packet, len);
+        }
+    }
+}
+
+static void cmd_subscribe(int dsock_idx, LMKD_CTRL_PACKET packet) {
+    struct lmk_subscribe params;
+
+    lmkd_pack_get_subscribe(packet, &params);
+    data_sock[dsock_idx].async_event_mask |= 1 << params.evt_type;
+}
+
 static void ctrl_command_handler(int dsock_idx) {
     LMKD_CTRL_PACKET packet;
     int len;
@@ -1077,6 +1105,11 @@ static void ctrl_command_handler(int dsock_idx) {
         len = lmkd_pack_set_getkillcnt_repl(packet, kill_cnt);
         if (ctrl_data_write(dsock_idx, (char *)packet, len) != len)
             return;
+        break;
+    case LMK_SUBSCRIBE:
+        if (nargs != 1)
+            goto wronglen;
+        cmd_subscribe(dsock_idx, packet);
         break;
     default:
         ALOGE("Received unknown command code %d", cmd);
@@ -2075,6 +2108,7 @@ static int kill_one_process(struct proc* procp, int min_oom_score) {
                                           min_oom_score);
         }
 #endif
+        ctrl_data_write_lmk_kill_occurred((pid_t)pid, uid, procp->oomadj, taskname);
         result = tasksize;
     }
 

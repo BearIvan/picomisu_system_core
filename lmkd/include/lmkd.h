@@ -18,6 +18,7 @@
 #define _LMKD_H_
 
 #include <arpa/inet.h>
+#include <string.h>
 #include <sys/cdefs.h>
 #include <sys/types.h>
 
@@ -32,6 +33,8 @@ enum lmk_cmd {
     LMK_PROCREMOVE,  /* Unregister a process */
     LMK_PROCPURGE,   /* Purge all registered processes */
     LMK_GETKILLCNT,  /* Get number of kills */
+    LMK_SUBSCRIBE,   /* Subscribe for asynchronous events */
+    LMK_PROCKILL,    /* Unsolicited msg to subscribed clients on proc kills */
 };
 
 /*
@@ -186,6 +189,61 @@ static inline size_t lmkd_pack_set_getkillcnt_repl(LMKD_CTRL_PACKET packet, int 
     packet[0] = htonl(LMK_GETKILLCNT);
     packet[1] = htonl(kill_cnt);
     return 2 * sizeof(int);
+}
+
+/* Types of asynchronous events sent from lmkd to its clients */
+enum async_event_type {
+    LMK_ASYNC_EVENT_FIRST,
+    LMK_ASYNC_EVENT_KILL = LMK_ASYNC_EVENT_FIRST,
+    LMK_ASYNC_EVENT_COUNT,
+};
+
+/* LMK_SUBSCRIBE packet payload */
+struct lmk_subscribe {
+    enum async_event_type evt_type;
+};
+
+/*
+ * For LMK_SUBSCRIBE packet get its payload.
+ * Warning: no checks performed, caller should ensure valid parameters.
+ */
+static inline void lmkd_pack_get_subscribe(LMKD_CTRL_PACKET packet, struct lmk_subscribe* params) {
+    params->evt_type = (enum async_event_type)ntohl(packet[1]);
+}
+
+/**
+ * Prepare LMK_SUBSCRIBE packet and return packet size in bytes.
+ * Warning: no checks performed, caller should ensure valid parameters.
+ */
+static inline size_t lmkd_pack_set_subscribe(LMKD_CTRL_PACKET packet, enum async_event_type evt_type) {
+    packet[0] = htonl(LMK_SUBSCRIBE);
+    packet[1] = htonl((int)evt_type);
+    return 2 * sizeof(int);
+}
+
+/**
+ * Prepare LMK_PROCKILL unsolicited packet and return packet size in bytes.
+ * Payload: pid, uid, oom_adj_score, name length (at most
+ * CTRL_PACKET_MAX_SIZE / sizeof(int)) and then one int per name character.
+ * Warning: no checks performed, caller should ensure valid parameters.
+ */
+static inline size_t lmkd_pack_set_prockills(LMKD_CTRL_PACKET packet, pid_t pid, uid_t uid,
+                                             int oomadj, const char* taskname) {
+    int len = strlen(taskname);
+    int i;
+
+    if ((size_t)len > CTRL_PACKET_MAX_SIZE / sizeof(int)) {
+        len = CTRL_PACKET_MAX_SIZE / sizeof(int);
+    }
+    packet[0] = htonl(LMK_PROCKILL);
+    packet[1] = htonl(pid);
+    packet[2] = htonl(uid);
+    packet[3] = htonl(oomadj);
+    packet[4] = htonl(len);
+    for (i = 0; i < len; i++) {
+        packet[5 + i] = htonl(taskname[i]);
+    }
+    return (5 + strlen(taskname)) * sizeof(int);
 }
 
 __END_DECLS
