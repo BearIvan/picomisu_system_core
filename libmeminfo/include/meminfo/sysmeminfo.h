@@ -89,5 +89,15 @@ class SysMemInfo final {
 // _always_ mapped in a process and are counted for in each process.
 uint64_t ReadVmallocInfo(const std::string& path = "/proc/vmallocinfo");
 
+// Read ION heaps allocated memory in kb from the sysfs file.
+// Returns false if the file is not present or cannot be read.
+bool ReadIonHeapsSizeKb(
+    uint64_t* size, const std::string& path = "/sys/kernel/ion/total_heaps_kb");
+
+// Read ION pools allocated memory in kb from the sysfs file.
+// Returns false if the file is not present or cannot be read.
+bool ReadIonPoolsSizeKb(
+    uint64_t* size, const std::string& path = "/sys/kernel/ion/total_pools_kb");
+
 }  // namespace meminfo
 }  // namespace android

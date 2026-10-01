@@ -195,6 +195,24 @@ cc_library {
     ],
 }
 
+// Smartisan meminfo dumps (Debug.getAllProcsMeminfoFast, crash_dump) of the factory
+// PICO OS 5.13.7 libmeminfo_utils.so.
+cc_library_shared {
+    name: "libmeminfo_utils",
+    srcs: ["sysmeminfo_utils.cpp"],
+    export_include_dirs: ["include_meminfo_utils"],
+    shared_libs: [
+        "libmemtrack",
+        "liblog",
+        "libbase",
+        "libmeminfo",
+    ],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+}
+
 cc_defaults {
     name: "libcutils_test_default",
     srcs: ["sockets_test.cpp"],
