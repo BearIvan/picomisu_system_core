@@ -37,7 +37,7 @@ enum lmk_cmd {
 /*
  * Max number of targets in LMK_TARGET command.
  */
-#define MAX_TARGETS 6
+#define MAX_TARGETS 50
 
 /*
  * Max packet length in bytes.
