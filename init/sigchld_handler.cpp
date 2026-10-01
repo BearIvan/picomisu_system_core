@@ -84,7 +84,14 @@ static bool ReapOneProcess() {
     if (siginfo.si_code == CLD_EXITED) {
         LOG(INFO) << name << " exited with status " << siginfo.si_status << wait_string;
     } else {
-        LOG(INFO) << name << " received signal " << siginfo.si_status << wait_string;
+        // PICO: the PICO kernel fills the killer pid (offset 0x30) and the killer comm
+        // (offset 0x34) into the CLD_KILLED siginfo; the factory init logs them.
+        const char* raw = reinterpret_cast<const char*>(&siginfo);
+        int killer;
+        memcpy(&killer, raw + 0x30, sizeof(killer));
+        std::string comm(raw + 0x34, strnlen(raw + 0x34, sizeof(siginfo) - 0x34));
+        LOG(INFO) << name << " received signal " << siginfo.si_status << " killer=" << killer
+                  << " comm=" << comm << wait_string;
     }
 
     if (!service) return true;

@@ -141,6 +141,8 @@ class Service {
     void OpenConsole() const;
     void KillProcessGroup(int signal);
     void SetProcessAttributes();
+    // PICO: tell the stabd driver about zygote crash loops (factory PICO OS 5.13.7).
+    static void notifyStabdBlockLogo(bool killed, bool fromRestart, long now);
 
     Result<Success> ParseCapabilities(std::vector<std::string>&& args);
     Result<Success> ParseClass(std::vector<std::string>&& args);
@@ -191,6 +193,8 @@ class Service {
     android::base::boot_clock::time_point time_started_;  // time of last start
     android::base::boot_clock::time_point time_crashed_;  // first crash within inspection window
     int crash_count_;                     // number of times crashed within window
+    // PICO: set by Restart() before StopOrReset(SVC_RESTART), cleared when Reap() restarts.
+    bool from_restart_ = false;
 
     uid_t uid_;
     gid_t gid_;

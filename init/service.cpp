@@ -339,8 +339,41 @@ void Service::SetProcessAttributes() {
     }
 }
 
+// PICO: the factory PICO OS 5.13.7 init tells the stabd driver (/dev/stabd, served by
+// /system/bin/stabd) when zygote keeps crashing. At most once per 30 minutes; the command is
+// 9 (killed, from a restart), 5 (killed) or 3 (not killed).
+struct StabdCommand {
+    int cmd;
+    int arg;
+};
+
+void Service::notifyStabdBlockLogo(bool killed, bool fromRestart, long now) {
+    static long last = 0;
+    if (last != 0 && now - last < 1800) {
+        return;
+    }
+    last = now;
+    LOG(INFO) << "notifyStabdBlockLogo zygote crash:killed=" << killed
+              << ":fromRestart=" << fromRestart;
+    StabdCommand command = {killed ? (fromRestart ? 9 : 5) : 3, 0};
+    int fd = open("/dev/stabd", O_RDWR);
+    if (fd < 0) {
+        LOG(ERROR) << "notifyStabdBlockLogo:write stabd driver error " << errno;
+        return;
+    }
+    TEMP_FAILURE_RETRY(write(fd, &command, sizeof(command)));
+    close(fd);
+}
+
 void Service::Reap(const siginfo_t& siginfo) {
     if (!(flags_ & SVC_ONESHOT) || (flags_ & SVC_RESTART)) {
+        // PICO: a zygote that died on its own (not stopped/reset, not SIGTERM) makes init ask
+        // sysoptservice for a log capture (smt.zygote.crash -> reboot_logcatcher).
+        if (name_ == "zygote" && !(flags_ & (SVC_DISABLED | SVC_RESET)) &&
+            siginfo.si_status != SIGTERM) {
+            LOG(ERROR) << "system_server or zygote error! catch log. service name : " << name_;
+            property_set("smt.zygote.crash", "true");
+        }
         KillProcessGroup(SIGKILL);
     }
 
@@ -364,6 +397,30 @@ void Service::Reap(const siginfo_t& siginfo) {
     // except when manually restarted.
     if ((flags_ & SVC_ONESHOT) && !(flags_ & SVC_RESTART) && !(flags_ & SVC_RESET)) {
         flags_ |= SVC_DISABLED;
+    }
+
+    // PICO: every 5th zygote exit within 6 minutes of the first one of a series is reported to
+    // the stabd driver.
+    if (name_ == "zygote") {
+        static long zygote_time_crashed = 0;
+        static int zygote_crash_count = 0;
+        struct timespec ts;
+        clock_gettime(CLOCK_BOOTTIME, &ts);
+        if (zygote_time_crashed == 0) {
+            zygote_crash_count = 1;
+            zygote_time_crashed = ts.tv_sec;
+        } else if (++zygote_crash_count >= 5) {
+            zygote_crash_count = 0;
+            if (ts.tv_sec < zygote_time_crashed + 360) {
+                LOG(ERROR) << "now < zygote_time_crashed + 6min";
+                if (siginfo.si_status == SIGKILL) {
+                    notifyStabdBlockLogo(true, from_restart_, ts.tv_sec);
+                } else {
+                    notifyStabdBlockLogo(false, true, ts.tv_sec);
+                }
+            }
+            zygote_time_crashed = 0;
+        }
     }
 
     // Disabled and reset processes do not get restarted automatically.
@@ -404,6 +461,7 @@ void Service::Reap(const siginfo_t& siginfo) {
     onrestart_.ExecuteAllCommands();
 
     NotifyStateChange("restarting");
+    from_restart_ = false;  // PICO
     return;
 }
 
@@ -966,6 +1024,19 @@ Result<Success> Service::Start() {
     if (pid == 0) {
         umask(077);
 
+        // PICO: the zygote child tells the stabd driver that zygote starts (command 2).
+        if (name_ == "zygote") {
+            LOG(ERROR) << "zygote start, notify stabd";
+            StabdCommand command = {2, 0};
+            int fd = open("/dev/stabd", O_RDWR);
+            if (fd < 0) {
+                LOG(ERROR) << "start zygote:write stabd driver error " << errno;
+            } else {
+                TEMP_FAILURE_RETRY(write(fd, &command, sizeof(command)));
+                close(fd);
+            }
+        }
+
         if (auto result = EnterNamespaces(); !result) {
             LOG(FATAL) << "Service '" << name_ << "' could not enter namespaces: " << result.error();
         }
@@ -1200,6 +1271,7 @@ void Service::Timeout() {
 void Service::Restart() {
     if (flags_ & SVC_RUNNING) {
         /* Stop, wait, then start the service. */
+        from_restart_ = true;  // PICO: reported to stabd by Reap()
         StopOrReset(SVC_RESTART);
     } else if (!(flags_ & SVC_RESTARTING)) {
         /* Just start the service since it's not running. */
