@@ -846,6 +846,49 @@ static bool should_use_metadata_encryption(const FstabEntry& entry) {
            (entry.fs_mgr_flags.file_encryption || entry.fs_mgr_flags.force_fde_or_fbe);
 }
 
+// PICO: the factory PICO OS 5.13.7 libfs_mgr tells the stabd driver (/dev/stabd, served by
+// /system/bin/stabd) that /data was attempted (command 1).
+static void notifyStabdStatus() {
+    struct {
+        int cmd;
+        int arg;
+    } command = {1, 0};
+    int fd = open("/dev/stabd", O_RDWR);
+    if (fd < 0) {
+        PLOG(ERROR) << "notifyStabdStatus:write stabd driver error..";
+        return;
+    }
+    TEMP_FAILURE_RETRY(write(fd, &command, sizeof(command)));
+    close(fd);
+}
+
+// PICO: the factory copies the kernel log to /mnt/vendor/persist/kernellog when /data fails to
+// mount: a vforked child reads /dev/kmsg until alarm(4) ends it. Safety deviation: the factory
+// child returns into fs_mgr_mount_all when an open fails; here it _exit()s instead.
+static void collectKernelLog() {
+    char buf[4096];
+    pid_t pid = vfork();
+    if (pid == 0) {
+        int out = open("/mnt/vendor/persist/kernellog", O_RDWR | O_CREAT, 0666);
+        if (out >= 0) {
+            int in = open("/dev/kmsg", O_RDONLY);
+            if (in >= 0) {
+                alarm(4);
+                while (read(in, buf, sizeof(buf)) > 0) {
+                    buf[sizeof(buf) - 1] = '\0';
+                    write(out, buf, strlen(buf));
+                }
+                close(in);
+            }
+            close(out);
+        }
+        _exit(0);
+    } else if (pid > 0) {
+        int status;
+        waitpid(pid, &status, WUNTRACED);
+    }
+}
+
 // Check to see if a mountable volume has encryption requirements
 static int handle_encryptable(const FstabEntry& entry) {
     // If this is block encryptable, need to trigger encryption.
@@ -1208,6 +1251,11 @@ int fs_mgr_mount_all(Fstab* fstab, int mount_mode) {
         i = last_idx_inspected;
         int mount_errno = errno;
 
+        // PICO: report the /data mount attempt to stabd, as the factory does.
+        if (current_entry.mount_point == "/data") {
+            notifyStabdStatus();
+        }
+
         // Handle success and deal with encryptability.
         if (mret) {
             int status = handle_encryptable(attempted_entry);
@@ -1234,6 +1282,11 @@ int fs_mgr_mount_all(Fstab* fstab, int mount_mode) {
 
             // Success!  Go get the next one.
             continue;
+        }
+
+        // PICO: keep the kernel log of a failed /data mount on persist.
+        if (current_entry.mount_point == "/data") {
+            collectKernelLog();
         }
 
         // Mounting failed, understand why and retry.
