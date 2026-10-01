@@ -52,6 +52,8 @@ const std::vector<std::string> SysMemInfo::kDefaultSysMemInfoTags = {
         SysMemInfo::kMemSReclaim,   SysMemInfo::kMemSUnreclaim,  SysMemInfo::kMemSwapTotal,
         SysMemInfo::kMemSwapFree,   SysMemInfo::kMemMapped,      SysMemInfo::kMemVmallocUsed,
         SysMemInfo::kMemPageTables, SysMemInfo::kMemKernelStack,
+        // Smartisan (factory PICO OS 5.13.7): KGSL cached graphics memory and MemAvailable.
+        "GFX_cached:",              "MemAvailable:",
 };
 
 bool SysMemInfo::ReadMemInfo(const std::string& path) {
