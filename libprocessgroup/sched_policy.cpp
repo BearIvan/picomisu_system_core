@@ -45,6 +45,16 @@ int set_cpuset_policy(int tid, SchedPolicy policy) {
     policy = _policy(policy);
 
     switch (policy) {
+        // PICO OS 5.13.7: prefetched VR apps only get the prefetch blkio group.
+        case SP_PREFETCH_VR_APP:
+            return SetTaskProfiles(tid, {"PrefetchLowIoPriority"}, true) ? 0 : -1;
+        // PICO OS 5.13.7: background third-party apps (cpuset bg_3rd_app).
+        case SP_BG_3RD_APP:
+            return SetTaskProfiles(tid, {"HighEnergySaving", "ProcessCapacity3rd", "LowIoPriority",
+                                         "TimerSlackHigh"},
+                                   true)
+                           ? 0
+                           : -1;
         case SP_BACKGROUND:
             return SetTaskProfiles(tid, {"HighEnergySaving", "ProcessCapacityLow", "LowIoPriority",
                                          "TimerSlackHigh", "BlkIOBackground"},
@@ -78,6 +88,49 @@ int set_cpuset_policy(int tid, SchedPolicy policy) {
                            : -1;
         case SP_RESTRICTED:
             return SetTaskProfiles(tid, {"ServiceCapacityRestricted", "TimerSlackNormal"}, true)
+                           ? 0
+                           : -1;
+        // PICO OS 5.13.7 cpuset policies.
+        case SP_CLUSTER_BIG:
+            return SetTaskProfiles(tid, {"MaxPerformance", "PicoSystemCapacity", "MaxIoPriority",
+                                         "TimerSlackNormal", "BlkIOBackground"},
+                                   true)
+                           ? 0
+                           : -1;
+        case SP_CLUSTER_SUPER:
+            return SetTaskProfiles(tid, {"MaxPerformance", "ClusterSuperCapacity", "MaxIoPriority",
+                                         "TimerSlackNormal", "BlkIOBackground"},
+                                   true)
+                           ? 0
+                           : -1;
+        case SP_DEX2OAT:
+            return SetTaskProfiles(tid, {"MaxPerformance", "Dex2oatCapacity", "MaxIoPriority",
+                                         "TimerSlackNormal", "BlkIOBackground"},
+                                   true)
+                           ? 0
+                           : -1;
+        case SP_APP_INSHELL:
+            return SetTaskProfiles(tid, {"MaxPerformance", "PicoInShellCapacity", "MaxIoPriority",
+                                         "TimerSlackNormal"},
+                                   true)
+                           ? 0
+                           : -1;
+        case SP_SHELL_APP:
+            return SetTaskProfiles(tid, {"MaxPerformance", "PicoShellAppCapacity", "MaxIoPriority",
+                                         "TimerSlackNormal"},
+                                   true)
+                           ? 0
+                           : -1;
+        case SP_VRFOREGROUND:
+            return SetTaskProfiles(tid, {"MaxPerformance", "PicoVrForegroundCapacity",
+                                         "MaxIoPriority", "TimerSlackNormal"},
+                                   true)
+                           ? 0
+                           : -1;
+        case SP_COMPOSITOR:
+            return SetTaskProfiles(tid, {"MaxPerformance", "CompositorCapacity", "MaxIoPriority",
+                                         "TimerSlackNormal"},
+                                   true)
                            ? 0
                            : -1;
         default:
@@ -217,6 +270,10 @@ int get_sched_policy(int tid, SchedPolicy* policy) {
         *policy = SP_SYSTEM;
     } else if (group == "background") {
         *policy = SP_BACKGROUND;
+    } else if (group == "bg_3rd_app") {
+        *policy = SP_BG_3RD_APP;
+    } else if (group == "prefetch_vr_app") {
+        *policy = SP_PREFETCH_VR_APP;
     } else if (group == "top-app") {
         *policy = SP_TOP_APP;
     } else if (group == "restricted") {
@@ -246,11 +303,20 @@ int get_sched_policy(int, SchedPolicy* policy) {
 #endif
 
 const char* get_sched_policy_name(SchedPolicy policy) {
+    // PICO OS 5.13.7: the negative PICO policies have names outside the table.
+    if (policy == SP_PREFETCH_VR_APP) {
+        return "prefetch";
+    }
+    if (policy == SP_BG_3RD_APP) {
+        return "3rd";
+    }
     policy = _policy(policy);
     static const char* const kSchedPolicyNames[] = {
-            [SP_BACKGROUND] = "bg", [SP_FOREGROUND] = "fg", [SP_SYSTEM] = "  ",
-            [SP_AUDIO_APP] = "aa",  [SP_AUDIO_SYS] = "as",  [SP_TOP_APP] = "ta",
-            [SP_RT_APP] = "rt",     [SP_RESTRICTED] = "rs",
+            [SP_BACKGROUND] = "bg",    [SP_FOREGROUND] = "fg",    [SP_SYSTEM] = "  ",
+            [SP_AUDIO_APP] = "aa",     [SP_AUDIO_SYS] = "as",     [SP_TOP_APP] = "ta",
+            [SP_RT_APP] = "rt",        [SP_RESTRICTED] = "rs",    [SP_CLUSTER_BIG] = "ps",
+            [SP_CLUSTER_SUPER] = "cs", [SP_DEX2OAT] = "do",       [SP_APP_INSHELL] = "is",
+            [SP_SHELL_APP] = "sa",     [SP_VRFOREGROUND] = "vf",  [SP_COMPOSITOR] = "cp",
     };
     static_assert(arraysize(kSchedPolicyNames) == SP_CNT, "missing name");
     if (policy < SP_BACKGROUND || policy >= SP_CNT) {
