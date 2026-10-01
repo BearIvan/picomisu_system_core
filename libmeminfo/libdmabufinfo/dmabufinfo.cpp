@@ -40,7 +40,7 @@ namespace android {
 namespace dmabufinfo {
 
 static bool FileIsDmaBuf(const std::string& path) {
-    return ::android::base::StartsWith(path, "/dmabuf");
+    return ::android::base::StartsWith(path, "anon_inode:dmabuf");
 }
 
 static bool ReadDmaBufFdInfo(pid_t pid, int fd, std::string* name, std::string* exporter,
